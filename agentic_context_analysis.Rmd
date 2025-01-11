@@ -141,47 +141,84 @@ pre {
 ```{r mermaid_to_svg, echo=FALSE}
 # Function to convert Mermaid to SVG
 mermaid_to_svg <- function(diagram_code, filename) {
-    DiagrammeR::mermaid(diagram_code) %>%
+    DiagrammeR::grViz(diagram_code) %>%
         DiagrammeRsvg::export_svg() %>%
         cat(file = filename)
     return(paste0("![", filename, "](", filename, ")"))
 }
 
-# Base agent logic diagram
-base_agent_diagram <- '
-graph TD
-    A[User Input] --> B{Input Processor}
-    B --> C[Context Manager]
-    B --> D[Tool Manager]
-    B --> E[Response Generator]
+# Base agent logic diagram using DOT syntax
+base_agent_diagram <- 'digraph G {
+    graph [bgcolor="#282a36" pad="0.5"]
+    node [style="filled" fontcolor="#f8f8f2" fontname="Arial" shape="box" margin="0.2"]
+    edge [color="#bd93f9" penwidth="1.5"]
 
-    subgraph "Context Management"
-        C --> C1[File Context]
-        C --> C2[Conversation History]
-        C --> C3[System Rules]
-        C1 --> C4[Active Buffers]
-        C1 --> C5[Workspace State]
-    end
+    // Input nodes
+    UserInput [label="User Input" fillcolor="#ff79c6"]
+    InputProcessor [label="Input Processor" fillcolor="#ff79c6"]
 
-    subgraph "Tool Integration"
-        D --> D1[File Operations]
-        D --> D2[Terminal Commands]
-        D --> D3[Search Functions]
-        D1 --> D4[Edit Operations]
-        D1 --> D5[Read Operations]
-    end
+    // Manager nodes
+    ContextManager [label="Context Manager" fillcolor="#50fa7b"]
+    ToolManager [label="Tool Manager" fillcolor="#50fa7b"]
+    ResponseGenerator [label="Response Generator" fillcolor="#50fa7b"]
 
-    subgraph "Response Pipeline"
-        E --> E1[Format Checker]
-        E --> E2[Rule Validator]
-        E --> E3[Output Generator]
-    end
+    // Context subgraph
+    subgraph cluster_0 {
+        label="Context Management"
+        style="filled"
+        color="#44475a"
+        fillcolor="#282a36"
+        fontcolor="#f8f8f2"
 
-    classDef default fill:#282a36,stroke:#bd93f9,color:#f8f8f2
-    classDef processor fill:#ff79c6,stroke:#ff79c6,color:#f8f8f2
-    classDef manager fill:#50fa7b,stroke:#50fa7b,color:#282a36
-'
+        FileContext [label="File Context" fillcolor="#8be9fd"]
+        ConvHistory [label="Conversation History" fillcolor="#8be9fd"]
+        SysRules [label="System Rules" fillcolor="#8be9fd"]
+        ActiveBuffers [label="Active Buffers" fillcolor="#8be9fd"]
+        WorkspaceState [label="Workspace State" fillcolor="#8be9fd"]
+    }
 
+    // Tool subgraph
+    subgraph cluster_1 {
+        label="Tool Integration"
+        style="filled"
+        color="#44475a"
+        fillcolor="#282a36"
+        fontcolor="#f8f8f2"
+
+        FileOps [label="File Operations" fillcolor="#ffb86c"]
+        TerminalCmds [label="Terminal Commands" fillcolor="#ffb86c"]
+        SearchFuncs [label="Search Functions" fillcolor="#ffb86c"]
+        EditOps [label="Edit Operations" fillcolor="#ffb86c"]
+        ReadOps [label="Read Operations" fillcolor="#ffb86c"]
+    }
+
+    // Response subgraph
+    subgraph cluster_2 {
+        label="Response Pipeline"
+        style="filled"
+        color="#44475a"
+        fillcolor="#282a36"
+        fontcolor="#f8f8f2"
+
+        FormatChecker [label="Format Checker" fillcolor="#f1fa8c"]
+        RuleValidator [label="Rule Validator" fillcolor="#f1fa8c"]
+        OutputGen [label="Output Generator" fillcolor="#f1fa8c"]
+    }
+
+    // Connections
+    UserInput -> InputProcessor
+    InputProcessor -> {ContextManager ToolManager ResponseGenerator}
+
+    ContextManager -> {FileContext ConvHistory SysRules}
+    FileContext -> {ActiveBuffers WorkspaceState}
+
+    ToolManager -> {FileOps TerminalCmds SearchFuncs}
+    FileOps -> {EditOps ReadOps}
+
+    ResponseGenerator -> {FormatChecker RuleValidator OutputGen}
+}'
+
+# Render the diagram
 mermaid_to_svg(base_agent_diagram, "base_agent_logic.svg")
 ```
 
