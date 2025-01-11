@@ -1,7 +1,8 @@
 # PowerShell script to run cleanup and upload process
 param (
     [switch]$Force,
-    [string]$WorkingDir = $PSScriptRoot
+    [string]$WorkingDir = $PSScriptRoot,
+    [string]$RPath = "D:\Utils\R\R-4.4.0\bin"
 )
 
 # Function to write colored output
@@ -14,15 +15,27 @@ function Write-Status {
     Write-Host "[$Status] $Message" -ForegroundColor $Color
 }
 
-# Function to check R installation
-function Test-RInstallation {
+# Function to setup R environment
+function Setup-REnvironment {
+    # Add R to path if not already there
+    $env:Path = "$RPath;$env:Path"
+    
+    # Set R_HOME environment variable
+    $env:R_HOME = (Split-Path $RPath -Parent)
+    Write-Status "Set R_HOME to: $env:R_HOME" "SETUP" "Yellow"
+    
+    # Verify R installation
     try {
-        $rVersion = (R --version)[0]
-        Write-Status "Found R: $rVersion" "OK" "Green"
+        $rExe = Join-Path $RPath "R.exe"
+        if (-not (Test-Path $rExe)) {
+            throw "R.exe not found at: $rExe"
+        }
+        $rVersion = & $rExe --version 2>&1
+        Write-Status "Found R: $($rVersion[0])" "OK" "Green"
         return $true
     }
     catch {
-        Write-Status "R is not installed or not in PATH" "ERROR" "Red"
+        Write-Status "Error verifying R installation: $_" "ERROR" "Red"
         return $false
     }
 }
@@ -56,7 +69,9 @@ function Install-RPackages {
     
     $installCommand = $installScript -join "; "
     Write-Status "Installing required R packages..." "SETUP" "Yellow"
-    R --quiet -e $installCommand
+    
+    $rExe = Join-Path $RPath "R.exe"
+    & $rExe --quiet -e $installCommand
 }
 
 # Function to check and create required files
@@ -84,9 +99,9 @@ try {
     Set-Location $WorkingDir
     Write-Status "Starting cleanup and upload process" "START" "Cyan"
 
-    # Check R installation
-    if (-not (Test-RInstallation)) {
-        throw "R is required but not found"
+    # Setup R environment
+    if (-not (Setup-REnvironment)) {
+        throw "Failed to setup R environment"
     }
 
     # Initialize environment
@@ -97,7 +112,8 @@ try {
 
     # Run the cleanup and upload process
     Write-Status "Running cleanup and upload scripts..." "PROCESS" "Yellow"
-    R --quiet -e "source('cleanup.R')"
+    $rExe = Join-Path $RPath "R.exe"
+    & $rExe --quiet -e "source('cleanup.R')"
 
     # Check if gallery.md was created
     if (Test-Path "gallery.md") {
