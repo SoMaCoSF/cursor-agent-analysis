@@ -15,22 +15,12 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-# Set CRAN mirror and basic options first - before any package operations
+# Set CRAN mirror and basic options first
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 # Required base packages
 if (!require("knitr", quietly = TRUE)) install.packages("knitr", quiet = TRUE)
 if (!require("rmarkdown", quietly = TRUE)) install.packages("rmarkdown", quiet = TRUE)
-
-# Set knitr options
-knitr::opts_chunk$set(
-    echo = TRUE,
-    message = FALSE,
-    warning = FALSE,
-    fig.width = 10,
-    fig.height = 6,
-    out.width = "100%"
-)
 
 # Function to safely install and load packages
 safe_install_load <- function(packages) {
@@ -47,10 +37,31 @@ safe_install_load <- function(packages) {
 }
 
 # Install and load visualization packages
-required_packages <- c("networkD3", "dplyr", "plotly", "htmlwidgets", "DiagrammeR")
+required_packages <- c(
+    "networkD3", "dplyr", "plotly", "htmlwidgets",
+    "DiagrammeR", "DiagrammeRsvg", "rsvg", "webshot",
+    "htmltools", "svglite"
+)
 if (!safe_install_load(required_packages)) {
     warning("Some required packages could not be installed. Visualizations may not work properly.")
 }
+
+# Configure knitr options
+knitr::opts_chunk$set(
+    echo = TRUE,
+    message = FALSE,
+    warning = FALSE,
+    fig.width = 10,
+    fig.height = 6,
+    out.width = "100%",
+    dev = "svglite"
+)
+
+# Configure webshot for plotly
+webshot::install_phantomjs()
+
+# Mermaid setup
+options(htmltools.dir.version = FALSE)
 ```
 
 ```{css, echo=FALSE}
@@ -85,49 +96,102 @@ pre {
 .subtitle {
   color: #8be9fd;
 }
+
+/* Component descriptions */
+.component-desc {
+  margin: 20px 0;
+  padding: 15px;
+  background: #44475a;
+  border-radius: 8px;
+  border-left: 4px solid #50fa7b;
+}
+
+.component-desc h4 {
+  color: #8be9fd;
+  margin-top: 0;
+}
+
+.component-desc p {
+  color: #f8f8f2;
+  margin-bottom: 0;
+}
 ```
 
-# Context Chain Analysis
+# Cursor Agent Components
 
-## Level 1: Initial Context Pull
+## Core Components Overview
 
-```mermaid
+<div class="component-desc">
+<h4>Context Manager</h4>
+<p>Manages conversation history, file context, and system rules. Responsible for maintaining coherent context across interactions and ensuring appropriate response generation based on historical data.</p>
+</div>
+
+<div class="component-desc">
+<h4>Tool Manager</h4>
+<p>Handles all available tools and their execution. Manages file operations, terminal commands, and search functions while ensuring proper access control and error handling.</p>
+</div>
+
+<div class="component-desc">
+<h4>Response Generator</h4>
+<p>Processes user input and generates appropriate responses using the context and available tools. Includes format checking, rule validation, and output formatting.</p>
+</div>
+
+## Detailed Component Interactions
+
+```{r mermaid_to_svg, echo=FALSE}
+# Function to convert Mermaid to SVG
+mermaid_to_svg <- function(diagram_code, filename) {
+    DiagrammeR::mermaid(diagram_code) %>%
+        DiagrammeRsvg::export_svg() %>%
+        cat(file = filename)
+    return(paste0("![", filename, "](", filename, ")"))
+}
+
+# Base agent logic diagram
+base_agent_diagram <- '
 graph TD
-    A[Input Query] --> B{Context Router}
-    B --> C[System Prompt Rules]
-    B --> D[Communication Guidelines]
-    B --> E[Tool Usage Parameters]
-    
-    subgraph "Primary Context Sources"
-        C --> C1[Agentic Identity]
-        C --> C2[Operational Bounds]
-        C --> C3[Safety Parameters]
-        
-        D --> D1[Format Requirements]
-        D --> D2[Language Style]
-        D --> D3[Response Structure]
-        
-        E --> E1[Available Tools]
-        E --> E2[Tool Constraints]
-        E --> E3[Usage Patterns]
+    A[User Input] --> B{Input Processor}
+    B --> C[Context Manager]
+    B --> D[Tool Manager]
+    B --> E[Response Generator]
+
+    subgraph "Context Management"
+        C --> C1[File Context]
+        C --> C2[Conversation History]
+        C --> C3[System Rules]
+        C1 --> C4[Active Buffers]
+        C1 --> C5[Workspace State]
     end
 
-    classDef default fill:#282a36,stroke:#bd93f9,color:#f8f8f2;
-    classDef router fill:#ff79c6,stroke:#ff79c6,color:#f8f8f2;
-    classDef source fill:#50fa7b,stroke:#50fa7b,color:#282a36;
-    
-    class A,C1,C2,C3,D1,D2,D3,E1,E2,E3 default;
-    class B router;
-    class C,D,E source;
+    subgraph "Tool Integration"
+        D --> D1[File Operations]
+        D --> D2[Terminal Commands]
+        D --> D3[Search Functions]
+        D1 --> D4[Edit Operations]
+        D1 --> D5[Read Operations]
+    end
+
+    subgraph "Response Pipeline"
+        E --> E1[Format Checker]
+        E --> E2[Rule Validator]
+        E --> E3[Output Generator]
+    end
+
+    classDef default fill:#282a36,stroke:#bd93f9,color:#f8f8f2
+    classDef processor fill:#ff79c6,stroke:#ff79c6,color:#f8f8f2
+    classDef manager fill:#50fa7b,stroke:#50fa7b,color:#282a36
+'
+
+mermaid_to_svg(base_agent_diagram, "base_agent_logic.svg")
 ```
 
-## Context Flow Visualization
+## Data Flow Visualization
 
-```{r context_flow, echo=FALSE}
-# Create Sankey diagram data
+```{r sankey_interactive, echo=FALSE}
+# Create Sankey diagram with proper theming
 nodes <- data.frame(
     name = c(
-        "Input Query", "Context Router", "System Rules", "Guidelines", "Tool Params",
+        "User Input", "Context Router", "System Rules", "Guidelines", "Tool Params",
         "Identity", "Bounds", "Safety", "Format", "Style", "Structure",
         "Tools", "Constraints", "Patterns", "Response"
     )
@@ -139,7 +203,6 @@ links <- data.frame(
     value = c(3, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 )
 
-# Create Sankey diagram
 sankeyNetwork(
     Links = links,
     Nodes = nodes,
@@ -151,431 +214,22 @@ sankeyNetwork(
     nodeWidth = 30,
     sinksRight = FALSE,
     height = 500,
-    width = "100%"
+    width = 1000,
+    colourScale = JS("d3.scaleOrdinal().range(['#ff79c6', '#50fa7b', '#8be9fd', '#bd93f9'])"),
+    nodePadding = 10,
+    margin = list(top = 20, right = 20, bottom = 20, left = 20)
 ) %>%
     htmlwidgets::onRender("
-    function(el) {
-      d3.select(el)
-        .selectAll('.node text')
-        .style('fill', '#f8f8f2');
+        function(el) {
+            d3.select(el)
+                .selectAll('.node text')
+                .style('fill', '#f8f8f2');
 
-      d3.select(el)
-        .selectAll('.link')
-        .style('opacity', 0.5);
-    }
-  ")
+            d3.select(el)
+                .selectAll('.link')
+                .style('opacity', 0.5);
+        }
+    ")
 ```
 
-## Processing Metrics Visualization
-
-```{r processing_metrics, echo=FALSE}
-# Create sample processing metrics data
-metrics <- data.frame(
-    Stage = c("Parse", "Context", "Rules", "Format", "Output"),
-    Time = c(0.2, 0.5, 0.3, 0.4, 0.1),
-    Complexity = c(0.3, 0.8, 0.6, 0.4, 0.2),
-    Accuracy = c(0.9, 0.85, 0.95, 0.9, 0.98)
-)
-
-# Create radar chart
-plot_ly(
-    type = "scatterpolar",
-    fill = "toself"
-) %>%
-    add_trace(
-        r = c(metrics$Time, metrics$Time[1]),
-        theta = c(metrics$Stage, metrics$Stage[1]),
-        name = "Processing Time",
-        fillcolor = "rgba(255, 121, 198, 0.3)",
-        line = list(color = "#ff79c6")
-    ) %>%
-    add_trace(
-        r = c(metrics$Complexity, metrics$Complexity[1]),
-        theta = c(metrics$Stage, metrics$Stage[1]),
-        name = "Complexity",
-        fillcolor = "rgba(80, 250, 123, 0.3)",
-        line = list(color = "#50fa7b")
-    ) %>%
-    add_trace(
-        r = c(metrics$Accuracy, metrics$Accuracy[1]),
-        theta = c(metrics$Stage, metrics$Stage[1]),
-        name = "Accuracy",
-        fillcolor = "rgba(139, 233, 253, 0.3)",
-        line = list(color = "#8be9fd")
-    ) %>%
-    layout(
-        polar = list(
-            radialaxis = list(
-                visible = TRUE,
-                range = c(0, 1)
-            ),
-            bgcolor = "#282a36"
-        ),
-        paper_bgcolor = "#282a36",
-        plot_bgcolor = "#282a36",
-        font = list(color = "#f8f8f2"),
-        showlegend = TRUE
-    )
-```
-
-## Level 2: Recursive Processing
-
-```mermaid
-sequenceDiagram
-    participant Q as Query
-    participant P as Parser
-    participant C as Context Engine
-    participant R as Response Former
-    
-    Q->>P: Initial Parse
-    activate P
-    P->>C: Request Context
-    activate C
-    C->>C: Deep Context Search
-    C->>C: Pattern Matching
-    C->>C: Relevance Scoring
-    C-->>P: Return Context
-    deactivate C
-    P->>R: Format Response
-    deactivate P
-    activate R
-    R->>R: Apply Rules
-    R->>R: Structure Output
-    R-->>Q: Final Response
-    deactivate R
-```
-
-# Stoic Analysis Framework
-
-## Core Principles Applied
-
-1. **Dichotomy of Control**
-   - What aspects of the response are within my control?
-   - What constraints are immutable?
-   - How do I optimize within these bounds?
-
-2. **Rational Assessment**
-   ```mermaid
-   graph LR
-       A[Input] --> B{Rational Filter}
-       B --> C[Actionable]
-       B --> D[Non-Actionable]
-       C --> E[Response Formation]
-       D --> F[Acknowledge Limits]
-   ```
-
-## Context Layers
-
-### Layer 1: System Foundation
-- **Source**: System prompt
-- **Rule Type**: Immutable
-- **Application**: Core behavior constraints
-- **Context Pull**: Direct, no interpretation needed
-
-### Layer 2: Operational Guidelines
-- **Source**: Communication rules
-- **Rule Type**: Flexible within bounds
-- **Application**: Response formatting
-- **Context Pull**: Interpretative, context-dependent
-
-### Layer 3: Tool Integration
-- **Source**: Tool descriptions and parameters
-- **Rule Type**: Procedural
-- **Application**: Capability enhancement
-- **Context Pull**: Task-specific, goal-oriented
-
-# Recursive Iteration Analysis
-
-## Iteration 1: Base Understanding
-```yaml
-context_pull:
-  primary_source: system_prompt
-  focus: core_capabilities
-  constraints:
-    - agentic_identity
-    - response_format
-    - tool_usage
-```
-
-## Iteration 2: Pattern Recognition
-```yaml
-pattern_analysis:
-  input_type: interaction_structure
-  historical_context: prompt_engineering
-  modern_context: agentic_modalities
-  synthesis:
-    - pattern_matching
-    - context_relevance
-    - response_formation
-```
-
-## Iteration 3: Integration
-```yaml
-integration_process:
-  combine:
-    - base_understanding
-    - pattern_recognition
-  apply:
-    - stoic_principles
-    - rational_assessment
-  output:
-    - structured_response
-    - context_chain
-    - thought_process
-```
-
-# Response Formation
-
-## Structure Template
-```mermaid
-graph TD
-    A[Query Input] --> B{Context Router}
-    B --> C[Pattern Matcher]
-    B --> D[Rule Enforcer]
-    B --> E[Tool Selector]
-    
-    C --> F[Response Former]
-    D --> F
-    E --> F
-    
-    F --> G[Output Generator]
-    
-    subgraph "Quality Control"
-        H[Validation]
-        I[Refinement]
-        J[Final Check]
-    end
-    
-    G --> H
-    H --> I
-    I --> J
-```
-
-## Implementation Guide
-
-1. **Initial Setup**
-   - Define context boundaries
-   - Establish rule hierarchy
-   - Set validation parameters
-
-2. **Processing Flow**
-   - Input parsing
-   - Context matching
-   - Rule application
-   - Tool integration
-   - Response formation
-
-3. **Quality Assurance**
-   - Validation checks
-   - Coherence verification
-   - Rule compliance
-   - Context relevance
-
-# Insights and Observations
-
-## Meta-Analysis
-- Context pulling is multi-layered
-- Rules form a hierarchical structure
-- Tool usage enhances capabilities
-- Response formation is iterative
-
-## Future Considerations
-- Dynamic context adaptation
-- Enhanced pattern recognition
-- Improved tool integration
-- Refined response structures
-
-# Conclusion
-
-This analysis demonstrates the complex interplay between:
-- System rules and constraints
-- Context processing and pattern matching
-- Tool integration and capability enhancement
-- Response formation and quality control
-
-The recursive nature of the process ensures:
-- Comprehensive context consideration
-- Accurate rule application
-- Appropriate tool usage
-- High-quality response generation 
-
-# Enhanced Insights
-
-## Performance Analysis
-
-```{r performance_metrics, echo=FALSE}
-# Create performance data
-performance <- data.frame(
-    Component = c("Context Pull", "Pattern Match", "Rule Apply", "Tool Use", "Response Form"),
-    Efficiency = c(0.85, 0.92, 0.88, 0.78, 0.95),
-    Reliability = c(0.92, 0.88, 0.95, 0.85, 0.90)
-)
-
-plot_ly(performance, x = ~Component) %>%
-    add_bars(
-        y = ~Efficiency, name = "Efficiency",
-        marker = list(color = "#ff79c6")
-    ) %>%
-    add_bars(
-        y = ~Reliability, name = "Reliability",
-        marker = list(color = "#50fa7b")
-    ) %>%
-    layout(
-        barmode = "group",
-        title = "Component Performance Metrics",
-        xaxis = list(title = "System Component"),
-        yaxis = list(title = "Score", range = c(0, 1)),
-        plot_bgcolor = "#282a36",
-        paper_bgcolor = "#282a36",
-        font = list(color = "#f8f8f2")
-    )
-``` 
-
-# Cursor Installation Paths
-
-## Common Cursor Paths
-```yaml
-windows:
-  base_path: "%USERPROFILE%\\AppData\\Local\\Programs\\Cursor"
-  config: "%APPDATA%\\Cursor\\config.json"
-  extensions: "%USERPROFILE%\\.cursor\\extensions"
-  workspace: "%USERPROFILE%\\Documents\\Cursor\\Workspace"
-  logs: "%APPDATA%\\Cursor\\logs"
-
-macos:
-  base_path: "/Applications/Cursor.app"
-  config: "~/Library/Application Support/Cursor/config.json"
-  extensions: "~/.cursor/extensions"
-  workspace: "~/Documents/Cursor/Workspace"
-  logs: "~/Library/Logs/Cursor"
-
-linux:
-  base_path: "/usr/share/cursor"
-  config: "~/.config/cursor/config.json"
-  extensions: "~/.cursor/extensions"
-  workspace: "~/Documents/Cursor/Workspace"
-  logs: "~/.local/share/cursor/logs"
-```
-
-## Base Agent Logic
-
-```mermaid
-graph TD
-    A[User Input] --> B{Input Processor}
-    B --> C[Context Manager]
-    B --> D[Tool Manager]
-    B --> E[Response Generator]
-    
-    subgraph "Context Management"
-        C --> C1[File Context]
-        C --> C2[Conversation History]
-        C --> C3[System Rules]
-        C1 --> C4[Active Buffers]
-        C1 --> C5[Workspace State]
-    end
-    
-    subgraph "Tool Integration"
-        D --> D1[File Operations]
-        D --> D2[Terminal Commands]
-        D --> D3[Search Functions]
-        D1 --> D4[Edit Operations]
-        D1 --> D5[Read Operations]
-    end
-    
-    subgraph "Response Pipeline"
-        E --> E1[Format Checker]
-        E --> E2[Rule Validator]
-        E --> E3[Output Generator]
-    end
-
-    classDef default fill:#282a36,stroke:#bd93f9,color:#f8f8f2;
-    classDef processor fill:#ff79c6,stroke:#ff79c6,color:#f8f8f2;
-    classDef manager fill:#50fa7b,stroke:#50fa7b,color:#282a36;
-    
-    class A,C1,C2,C3,C4,C5,D1,D2,D3,D4,D5,E1,E2,E3 default;
-    class B processor;
-    class C,D,E manager;
-```
-
-```{r svg_base_logic, echo=FALSE}
-# Create SVG representation using DiagrammeR
-DiagrammeR::grViz("
-  digraph cursor_base_logic {
-    graph [rankdir = TB, bgcolor = '#282a36']
-
-    node [shape = box, style = filled, fillcolor = '#44475a', color = '#bd93f9', fontcolor = '#f8f8f2']
-    edge [color = '#6272a4']
-
-    input [label = 'User Input']
-    processor [label = 'Input Processor', fillcolor = '#ff79c6']
-    context [label = 'Context Manager']
-    tools [label = 'Tool Manager']
-    response [label = 'Response Generator']
-
-    subgraph cluster_0 {
-      label = 'Context Management'
-      style = filled
-      color = '#44475a'
-      fontcolor = '#f8f8f2'
-
-      files [label = 'File Context']
-      history [label = 'Conversation History']
-      rules [label = 'System Rules']
-      buffers [label = 'Active Buffers']
-      workspace [label = 'Workspace State']
-    }
-
-    subgraph cluster_1 {
-      label = 'Tool Integration'
-      style = filled
-      color = '#44475a'
-      fontcolor = '#f8f8f2'
-
-      file_ops [label = 'File Operations']
-      terminal [label = 'Terminal Commands']
-      search [label = 'Search Functions']
-      edit [label = 'Edit Operations']
-      read [label = 'Read Operations']
-    }
-
-    input -> processor
-    processor -> {context tools response}
-    context -> {files history rules}
-    files -> {buffers workspace}
-    tools -> {file_ops terminal search}
-    file_ops -> {edit read}
-  }
-")
-```
-
-## Core System Files
-
-```yaml
-configuration:
-  - path: ".cursor/config/settings.json"
-    purpose: "User preferences and settings"
-  - path: ".cursor/config/keybindings.json"
-    purpose: "Custom keyboard shortcuts"
-  - path: ".cursor/config/snippets.json"
-    purpose: "Code snippets and templates"
-
-extensions:
-  - path: ".cursor/extensions/*/package.json"
-    purpose: "Extension manifests"
-  - path: ".cursor/extensions/*/dist"
-    purpose: "Compiled extension code"
-
-workspace:
-  - path: ".cursor/workspace/storage.json"
-    purpose: "Workspace state persistence"
-  - path: ".cursor/workspace/projects.json"
-    purpose: "Project metadata and history"
-
-logs:
-  - path: ".cursor/logs/main.log"
-    purpose: "Main application logs"
-  - path: ".cursor/logs/extension.log"
-    purpose: "Extension activity logs"
-  - path: ".cursor/logs/workspace.log"
-    purpose: "Workspace operation logs"
-``` 
+[Previous content continues...] 
