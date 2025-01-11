@@ -58,14 +58,17 @@ knitr::opts_chunk$set(
 )
 
 # Safer PhantomJS installation
-tryCatch({
-    if (!webshot::is_phantomjs_installed()) {
-        message("Installing PhantomJS...")
-        webshot::install_phantomjs(force = TRUE)
+tryCatch(
+    {
+        if (!webshot::is_phantomjs_installed()) {
+            message("Installing PhantomJS...")
+            webshot::install_phantomjs(force = TRUE)
+        }
+    },
+    error = function(e) {
+        warning("PhantomJS installation failed. Some interactive plots may not render properly.")
     }
-}, error = function(e) {
-    warning("PhantomJS installation failed. Some interactive plots may not render properly.")
-})
+)
 
 # Mermaid setup
 options(htmltools.dir.version = FALSE)
@@ -124,7 +127,21 @@ pre {
 }
 ```
 
-# Cursor Agent Components
+# Introduction
+
+## Purpose and Scope
+
+This document explores the internal context processing and decision-making framework of an agentic AI system. Through recursive analysis and visualization, we examine how context is pulled, processed, and applied to generate responses.
+
+## Methodology
+
+The analysis employs a combination of:
+- Stream of consciousness exploration
+- Recursive context chain analysis
+- Visual representation of data flows
+- Component interaction mapping
+
+# System Architecture
 
 ## Core Components Overview
 
@@ -143,7 +160,7 @@ pre {
 <p>Processes user input and generates appropriate responses using the context and available tools. Includes format checking, rule validation, and output formatting.</p>
 </div>
 
-## Detailed Component Interactions
+## Component Interactions
 
 ```{r mermaid_to_svg, echo=FALSE}
 # Function to convert Mermaid to SVG
@@ -229,7 +246,19 @@ base_agent_diagram <- 'digraph G {
 mermaid_to_svg(base_agent_diagram, "base_agent_logic.svg")
 ```
 
-## Data Flow Visualization
+## Data Flow Analysis
+
+### Context Processing Pipeline
+
+The system processes context through multiple layers:
+1. Input Layer - Raw user input and system state
+2. Processing Layer - Initial parsing and routing
+3. Rule Processing Layer - Application of constraints
+4. Capability Layer - Tool and function access
+5. Integration Layer - Response composition
+6. Output Layer - Final response generation
+
+### Interactive Data Flow Visualization
 
 ```{r sankey_interactive, echo=FALSE}
 # Create a more detailed Sankey diagram with enhanced interactivity
@@ -375,4 +404,90 @@ sankeyNetwork(
     ")
 ```
 
-[Previous content continues...] 
+# Recursive Analysis
+
+## Context Chain Decomposition
+
+The context chain follows a recursive pattern:
+1. Base Context
+   - System rules
+   - Tool definitions
+   - Communication protocols
+2. Session Context
+   - Conversation history
+   - Active workspace state
+   - Recent actions
+3. Request Context
+   - Current user input
+   - Immediate task requirements
+   - Available tools
+
+## Decision Trees
+
+```{r decision_tree, echo=FALSE}
+# Decision tree visualization code here
+decision_tree <- DiagrammeR::grViz("
+digraph decision_tree {
+    graph [rankdir=TB bgcolor='#282a36']
+    node [shape=box style=filled fillcolor='#44475a' fontcolor='#f8f8f2' fontname='Arial']
+    edge [color='#bd93f9']
+
+    input [label='User Input']
+    context [label='Context Analysis']
+    tools [label='Tool Selection']
+    validation [label='Rule Validation']
+    execution [label='Execution']
+    response [label='Response Generation']
+
+    input -> context
+    context -> tools
+    tools -> validation
+    validation -> execution
+    execution -> response
+}")
+
+decision_tree
+```
+
+# Implementation Details
+
+## Tool Integration
+
+Tools are integrated through a layered approach:
+1. Tool Definition Layer
+2. Access Control Layer
+3. Execution Layer
+4. Response Integration Layer
+
+## Context Management
+
+Context is managed through:
+1. Active Memory Buffers
+2. Persistent Storage
+3. State Tracking
+4. History Management
+
+# Conclusion
+
+## Key Insights
+
+The analysis reveals:
+1. Recursive nature of context processing
+2. Importance of state management
+3. Critical role of validation
+4. Balance of flexibility and constraints
+
+## Future Directions
+
+Areas for future exploration:
+1. Enhanced context retention
+2. Improved tool orchestration
+3. Advanced validation mechanisms
+4. Expanded capability integration
+
+# References
+
+1. Internal System Documentation
+2. Tool Integration Specifications
+3. Context Processing Guidelines
+4. Response Generation Protocols 
